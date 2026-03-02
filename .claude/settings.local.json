@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install -e \".[dev]\")",
+      "Bash(pip install -e \".[dev]\" --no-deps)",
+      "Bash(pip install --user -e \".[dev]\")"
+    ]
+  }
+}
