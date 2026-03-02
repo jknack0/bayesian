@@ -79,7 +79,8 @@ class CPPIPositionSizer:
         # Signal strength scaling
         contracts_raw *= signal.strength
 
-        contracts = max(0, min(int(contracts_raw), self.max_contracts))
+        cap = signal.max_quantity if signal.max_quantity is not None else self.max_contracts
+        contracts = max(0, min(int(contracts_raw), cap))
 
         logger.debug(
             "CPPI sizing: cushion=${:.0f}, alloc=${:.0f}, risk/ct=${:.0f}, "

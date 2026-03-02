@@ -9,7 +9,6 @@ from bayesbot.strategy.base import BaseStrategy, PositionManagement, StrategyCon
 from bayesbot.strategy.defensive import DefensiveStrategy
 from bayesbot.strategy.exits import TripleBarrierManager
 from bayesbot.strategy.mean_reversion import MeanReversionStrategy
-from bayesbot.strategy.momentum import MomentumStrategy
 from bayesbot.strategy.orb import ORBStrategy
 
 
@@ -22,10 +21,9 @@ class StrategySelector:
 
     def __init__(self):
         self.strategies: list[BaseStrategy] = [
-            MomentumStrategy(),
             MeanReversionStrategy(),
             DefensiveStrategy(),
-            # ORBStrategy(),
+            ORBStrategy(),
         ]
         self.barrier_manager = TripleBarrierManager()
 
@@ -40,8 +38,8 @@ class StrategySelector:
             signal = strategy.generate_signal(ctx)
             if signal is None:
                 continue
-            if signal.direction == "SHORT":
-                continue  # long-only mode
+            if signal.direction == "SHORT" and signal.strategy_name != "orb":
+                continue  # long-only mode (except ORB which trades both sides)
             # Weight by regime probability of applicable regimes
             weight = 0.0
             for regime_name in strategy.applicable_regimes:

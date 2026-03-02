@@ -29,22 +29,28 @@ class MomentumStrategy(BaseStrategy):
         if gap > 3:
             return None
 
-        # Must be in trending regime with sufficient confidence
+        # High-conviction trending only
         trending_prob = self._get_regime_prob(regime, "trending")
-        if trending_prob < 0.45:
+        if trending_prob < 0.55:
             return None
 
         roc10 = feats.get("momentum_roc_10", 0.0)
+        roc50 = feats.get("momentum_roc_50", 0.0)
         sma_ratio = feats.get("close_sma20_ratio", 0.0)
         vol_ratio = feats.get("volume_sma_ratio", 0.0)
+        bar_dur = feats.get("bar_duration_ratio", 0.0)
 
         if vol_ratio < -0.5:
             return None  # very low volume — no conviction
 
-        # Determine direction (z-scored: >0 = above average)
-        if roc10 > 0.3 and sma_ratio > 0.3:
+        # Fast bars only — slow bars are mean-reverting, not trending
+        if bar_dur > 0.5:
+            return None
+
+        # Determine direction — multi-timeframe alignment
+        if roc10 > 0.4 and sma_ratio > 0.4 and roc50 > 0.1:
             direction = "LONG"
-        elif roc10 < -0.3 and sma_ratio < -0.3:
+        elif roc10 < -0.4 and sma_ratio < -0.4 and roc50 < -0.1:
             direction = "SHORT"
         else:
             return None
@@ -57,7 +63,7 @@ class MomentumStrategy(BaseStrategy):
         price = ctx.current_bar.get("close", 0.0)
         atr = ctx.atr
         stop_mult = 1.5
-        target_mult = 2.0
+        target_mult = 1.0
 
         if direction == "LONG":
             stop = price - stop_mult * atr
@@ -77,16 +83,16 @@ class MomentumStrategy(BaseStrategy):
             entry_price=price,
             stop_loss=stop,
             profit_target=target,
-            time_barrier_bars=30,
+            time_barrier_bars=20,
+            max_quantity=2,  # half size — momentum has thinner edge than MR
         )
 
     def manage_position(
         self, position: Position, ctx: StrategyContext
     ) -> PositionManagement:
-        atr = ctx.atr
         regime = ctx.regime
 
-        # Exit if regime leaves trending — don't block other strategies
+        # Exit if regime leaves trending
         trending_prob = self._get_regime_prob(regime, "trending")
         if trending_prob < 0.5:
             return PositionManagement(action="EXIT", exit_reason="REGIME_CHANGE")
@@ -95,16 +101,4 @@ class MomentumStrategy(BaseStrategy):
         if volatile_prob > 0.6:
             return PositionManagement(action="EXIT", exit_reason="REGIME_CHANGE")
 
-        # Trail stop to breakeven after 1 ATR profit
-        if position.direction == "LONG":
-            unrealized = position.current_price - position.entry_price
-        else:
-            unrealized = position.entry_price - position.current_price
-
-        if unrealized > atr and position.stop_loss != position.entry_price:
-            return PositionManagement(
-                action="ADJUST_STOP", new_stop_loss=position.entry_price
-            )
-
         return PositionManagement(action="HOLD")
-

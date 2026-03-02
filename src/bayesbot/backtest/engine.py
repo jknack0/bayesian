@@ -243,7 +243,7 @@ class BacktestEngine:
                 and signal.strategy_name not in active_strategies
             )
             if can_enter:
-                    kelly_f = self.kelly.compute(trades)
+                    kelly_f = self.kelly.compute(trades, strategy_name=signal.strategy_name)
                     regime_scale = self.regime_scaler.compute_scale(regime)
                     qty = self.sizer.calculate_position_size(
                         signal, equity, atr, regime, kelly_f,

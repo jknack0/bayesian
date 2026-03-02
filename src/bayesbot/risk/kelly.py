@@ -19,12 +19,17 @@ class KellyCalculator:
         self,
         trade_history: list[CompletedTrade],
         kelly_fraction: float = 0.25,
+        strategy_name: str | None = None,
     ) -> float:
         """Return the fractional Kelly bet size (0 to ~0.15 typically).
 
         If estimated edge is ≤ 0 or insufficient history, returns 0.
+        When strategy_name is provided, only trades from that strategy
+        are used — prevents cross-strategy dilution of edge estimates.
         """
         trades = trade_history
+        if strategy_name:
+            trades = [t for t in trades if t.strategy_name == strategy_name]
         if len(trades) < self.min_trades:
             return 0.0
 
